@@ -148,8 +148,25 @@
       layoutCards();
     }
 
-    // ── Wheel → scroll cards ──
+    // ── Wheel → scroll cards (only when hovering center or adjacent cards) ──
     carousel.addEventListener('wheel', function(e) {
+      var target = e.target;
+      while (target && target !== carousel && !target.classList.contains('video-carousel-card')) {
+        target = target.parentNode;
+      }
+      if (!target || target === carousel) return; // not on a card — let page scroll
+
+      // Find this card's index in the allCards NodeList
+      var hoveredIdx = -1;
+      for (var ci = 0; ci < total; ci++) {
+        if (allCards[ci] === target) { hoveredIdx = ci; break; }
+      }
+      if (hoveredIdx < 0) return;
+
+      var absOff = Math.abs(hoveredIdx - currentIndex);
+      // Only scroll horizontally for center (0) and adjacent (1) cards
+      if (absOff > 1) return;
+
       e.preventDefault();
       var delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
       if (delta < -30) scrollTo(-1);
