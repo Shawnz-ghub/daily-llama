@@ -179,11 +179,11 @@
     newsGrid.innerHTML = items.map(function(nc) {
       var thumbHtml = nc.thumbnail ? '<div class="news-thumb"><img src="' + esc(nc.thumbnail) + '" alt="" loading="lazy"></div>' : '';
       var excerptHtml = nc.summary ? '<p class="card-excerpt">' + esc(nc.summary) + '</p>' : '';
-      return '<div class="card news-card">' +
+      return '<div class="card news-card" onclick="openArticle(this,\'' + esc(nc.url) + '\')" style="cursor:pointer;">' +
         thumbHtml +
-        '<a href="' + esc(nc.url) + '" target="_blank" rel="noopener" class="card-title">' +
+        '<div class="card-title">' +
           esc(nc.title) +
-        '</a>' +
+        '</div>' +
         '<div class="card-meta">' +
           '<span>' + fmtDate(nc.published_date) + '</span>' +
         '</div>' +
