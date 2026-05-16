@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+site-data/
+daily-llama-site/
+daily-llama-site.new/
+daily-llama-site.old/
+*.swp
+*.swo
+.DS_Store
