@@ -18,6 +18,9 @@ from utils.atomic_writer import atomic_swap
 
 logger = logging.getLogger(__name__)
 
+TARGET_VIDEOS = 20
+TARGET_NEWS = 36
+
 
 def main():
     """Main entry point for the site generator.
@@ -61,6 +64,7 @@ def main():
 
         # Score articles
         scored_articles = score_articles(articles, now=now)
+        all_scored = scored_articles.get("all_scored", [])
 
         # Collect all videos (from regular + named channels) sorted by score
         all_video_results = [s for s in scored_articles["all_scored"] if s["is_video"]]
@@ -76,8 +80,21 @@ def main():
             featured_video = all_video_results[0]
 
         # Trim to fixed limits: 20 videos, 36 news articles
-        trimmed_videos = all_video_results[:20]
-        trimmed_news = scored_articles.get("news_cards", [])[:36]
+        trimmed_videos = all_video_results[:TARGET_VIDEOS]
+        trimmed_news = scored_articles.get("news_cards", [])[:TARGET_NEWS]
+        # Pad from all_scored if short (guarantee exactly 36)
+        if len(trimmed_news) < TARGET_NEWS:
+            need = TARGET_NEWS - len(trimmed_news)
+            non_video_remainder = [s for s in all_scored
+                if not s.get("is_video", False) and s not in trimmed_news]
+            trimmed_news = trimmed_news + non_video_remainder[:need]
+
+        # Pad videos if short (guarantee at least some carousel content)
+        if len(trimmed_videos) < TARGET_VIDEOS:
+            need = TARGET_VIDEOS - len(trimmed_videos)
+            video_remainder = [s for s in all_scored
+                if s.get("is_video", False) and s not in trimmed_videos]
+            trimmed_videos = trimmed_videos + video_remainder[:need]
 
         # Build feed data with video carousel
         feed_data = {
