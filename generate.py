@@ -29,6 +29,21 @@ def main():
     """
     try:
         now = datetime.now(timezone.utc)
+        today_str = now.strftime("%Y-%m-%d")
+
+        # Archive previous feed before building new content
+        if os.path.isfile(FEED_PATH):
+            try:
+                with open(FEED_PATH) as f:
+                    old_feed = json.load(f)
+                daily_path = os.path.join(ARCHIVE_DIR, today_str + ".json")
+                if not os.path.isfile(daily_path):
+                    os.makedirs(ARCHIVE_DIR, exist_ok=True)
+                    with open(daily_path, "w") as f:
+                        json.dump(old_feed, f, indent=2)
+                    logger.info("Archived previous feed to " + daily_path)
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning("Could not archive previous feed: " + str(e))
 
         # Collect data
         articles = collect_articles()
@@ -60,6 +75,10 @@ def main():
         if not featured_video and all_video_results:
             featured_video = all_video_results[0]
 
+        # Trim to fixed limits: 20 videos, 36 news articles
+        trimmed_videos = all_video_results[:20]
+        trimmed_news = scored_articles.get("news_cards", [])[:36]
+
         # Build feed data with video carousel
         feed_data = {
             "generated_at": now.isoformat(),
@@ -68,8 +87,8 @@ def main():
             "failed_steps": [],
             "featured_video": featured_video,
             "runner_ups": carousel_videos,
-            "news_cards": scored_articles.get("news_cards", []),
-            "video_carousel": all_video_results,  # All videos for the cover-flow carousel
+            "news_cards": trimmed_news,
+            "video_carousel": trimmed_videos,  # Trimmed to 20 for the cover-flow carousel
             "task_reports": task_reports,
             "stack_health": health,
             "novel_findings": scored_articles.get("novel_findings", []),
@@ -78,7 +97,8 @@ def main():
 
         # Generate thumbnails for news cards
         logging.info("Generating thumbnails for news cards...")
-        feed_data["news_cards"] = batch_generate(feed_data.get("news_cards", []))
+        # Always force retry on site regeneration to catch previously failed URLs
+        feed_data["news_cards"] = batch_generate(feed_data.get("news_cards", []), force_retry=True)
 
         # Empty-day prospecting: if 0 news cards, try carryover from yesterday
         if len(feed_data.get("news_cards", [])) == 0:
@@ -98,14 +118,14 @@ def main():
         with open(archive_path, "w") as f:
             json.dump(feed_data, f, indent=2)
 
-        # Regenerate archive index.json (list of available months)
-        months = sorted(
+        # Regenerate archive index.json (list of all archive entries)
+        all_entries = sorted(
             fname[:-5] for fname in os.listdir(ARCHIVE_DIR)
-            if fname.endswith(".json") and len(fname) == 12 and fname != "index.json"
+            if fname.endswith(".json") and fname != "index.json"
         )
         index_path = os.path.join(ARCHIVE_DIR, "index.json")
         with open(index_path, "w") as f:
-            json.dump(months[-12:], f)
+            json.dump(all_entries[-90:], f)  # Keep last 90 entries max
 
         # Generate HTML into SITE_NEW
         generate_html(feed_data, SITE_NEW)
@@ -144,14 +164,14 @@ def main():
 
 
 def _list_archive_months():
-    """List available archive month slugs from the archive directory."""
+    """List available archive slugs from the archive directory (daily + monthly)."""
     if not os.path.isdir(ARCHIVE_DIR):
         return []
-    months = []
+    slugs = []
     for fname in sorted(os.listdir(ARCHIVE_DIR)):
-        if fname.endswith(".json") and len(fname) == 12:  # e.g. "2026-05.json"
-            months.append(fname[:-5])
-    return months[-12:]  # Last 12 months max
+        if fname.endswith(".json") and fname != "index.json":
+            slugs.append(fname[:-5])
+    return slugs[-90:]  # Keep last 90 entries max
 
 
 if __name__ == "__main__":

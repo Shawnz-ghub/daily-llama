@@ -405,6 +405,34 @@ img { max-width: 100%; display: block; }
 .archive-month {
   margin-bottom: 12px;
 }
+.archive-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+.archive-header:hover { color: var(--accent); }
+.archive-header h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+.archive-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
 .archive-month h3 {
   font-size: 0.95rem;
   font-weight: 600;
@@ -432,6 +460,11 @@ img { max-width: 100%; display: block; }
   color: var(--text-muted);
   min-width: 48px;
   text-align: right;
+}
+.archive-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
 }
 
 /* ── Footer ────────────────────────────────────────────── */

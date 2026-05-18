@@ -237,6 +237,25 @@ def _page_wrapper(title, current_page, feed_data, body_content, extra_scripts=''
                    '    <div id="video-player"></div>\n'
                    '  </div>\n'
                    '</div>\n')
+        config_overlay = ('<div id="config-overlay" class="config-overlay hidden">\n'
+                         '  <div class="config-modal">\n'
+                         '    <div class="config-header">\n'
+                         '      <h2>Site Settings</h2>\n'
+                         '      <button id="config-close" class="config-close-btn" title="Close">&times;</button>\n'
+                         '    </div>\n'
+                         '    <div class="config-body">\n'
+                         '      <label class="config-label">Keywords (one category per line: CategoryName: term1, term2, ...):</label>\n'
+                         '      <textarea id="config-keywords" class="config-textarea" rows="10" spellcheck="false"></textarea>\n'
+                         '      <label class="config-label">Favored YouTube Channels (one per line):</label>\n'
+                         '      <textarea id="config-channels" class="config-textarea" rows="6" spellcheck="false"></textarea>\n'
+                         '    </div>\n'
+                         '    <div class="config-footer">\n'
+                         '      <span id="config-status" class="config-status"></span>\n'
+                         '      <button id="config-save" class="config-btn config-btn-primary">Save</button>\n'
+                         '      <button id="config-run" class="config-btn config-btn-accent">Save &amp; Run Agent Now</button>\n'
+                         '    </div>\n'
+                         '  </div>\n'
+                         '</div>\n')
         article_overlay = ('<div id="article-overlay" class="article-overlay hidden">\n'
                           '  <div class="article-reader">\n'
                           '    <div class="article-reader-header">\n'
@@ -253,15 +272,17 @@ def _page_wrapper(title, current_page, feed_data, body_content, extra_scripts=''
                           '  </div>\n'
                           '</div>\n')
     else:
+        config_overlay = ''
         article_overlay = ''
+
     return ('<!DOCTYPE html>\n'
             '<html lang="en" class="dark">\n'
             '<head>\n'
             '  <meta charset="UTF-8">\n'
             '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
             '  <title>The Daily Llama &mdash; ' + _esc(title) + '</title>\n'
-            '  <link rel="icon" type="image/png" href="../llama-logo.png?v=8">\n'
-            '  <link rel="stylesheet" href="../style.css?v=8">\n'
+            '  <link rel="icon" type="image/png" href="../llama-logo.png?v=9">\n'
+            '  <link rel="stylesheet" href="../style.css?v=9">\n'
             '</head>\n'
             '<body>\n'
             + nav
@@ -270,6 +291,7 @@ def _page_wrapper(title, current_page, feed_data, body_content, extra_scripts=''
             + '</div>\n'
             + footer
             + overlay
+            + config_overlay
             + article_overlay
             + extra_scripts
             + '</body>\n'
@@ -287,7 +309,7 @@ def _render_index(feed_data):
     recent_videos = list(video_carousel)
 
     body = ('<div class="site-header" style="display:flex;align-items:center;justify-content:center;gap:20px;padding-bottom:24px;">\n'
-            '  <img src="../llama-logo.png" alt="" width="78" height="78" style="border-radius:10px;flex-shrink:0;">\n'
+            '  <img src="../llama-logo.png" alt="" width="78" height="78" style="border-radius:10px;flex-shrink:0;cursor:pointer;" onclick="openConfig()" title="Site Settings">\n'
             '  <h1 style="font-family:\'Georgia\',\'Times New Roman\',\'Palatino Linotype\',serif;font-size:3.5rem;font-weight:800;letter-spacing:-0.5px;margin:0;">The Daily Llama</h1>\n'
             '</div>\n')
 
@@ -382,7 +404,8 @@ def _render_index(feed_data):
         body += '  </div>\n'
         body += '</div>\n'
 
-    scripts = ('<script src="../feed-loader.js?v=8"></script>\n'
+    scripts = ('<script src="../feed-loader.js?v=9"></script>\n'
+               '<script src="../config-loader.js?v=9"></script>\n'
                '<script>\n'
                '(function(){\n'
                '  var overlay = document.getElementById(\'video-overlay\');\n'
@@ -602,7 +625,7 @@ def _render_archive(feed_data):
              '  <div id="archive-loading" class="text-center" style="padding:40px 0;color:var(--text-muted);">\n'
              '    Loading archives...\n  </div>\n</div>\n')
     body += '<div id="archive-error" class="error-banner hidden">\n  <h3>&#9888; Archive Error</h3>\n  <p id="archive-error-msg"></p>\n</div>\n'
-    scripts = '<script src="../archive-loader.js?v=8"></script>\n'
+    scripts = '<script src="../archive-loader.js?v=9"></script>\n'
     return body, scripts
 
 

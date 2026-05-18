@@ -1,9 +1,8 @@
 /**
- * archive-loader.js — The Daily Llama
+ * archive-loader.js — The Daily LLama 
  *
- * Loads monthly archive JSON files from ../archive/ and renders them
- * grouped by year/month with toggleable month sections.
- * Pure vanilla JS.
+ * Loads archive snapshot JSON files from ../archive/ and renders them
+ * as daily feed snapshots. Pure vanilla JS.
  */
 
 (function () {
@@ -21,97 +20,95 @@
     try {
       // Fetch index
       const resp = await fetch(ARCHIVE_LIST_URL);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-      const months = await resp.json();  // e.g. ["2026-05", "2026-04", ...]
+      if (!resp.ok) throw new Error('HTTP ' + resp.status + ': ' + resp.statusText);
+      const entries = await resp.json();
 
-      if (!months.length) {
+      if (!entries.length) {
         container.innerHTML = '<p class="text-center" style="color:var(--text-muted);padding:40px 0;">No archived feeds yet.</p>';
         if (loadingEl) loadingEl.classList.add('hidden');
         return;
       }
 
-      // Load each month file
-      const yearGroups = {};
-      for (const monthSlug of months.slice(0, 12)) {
+      // Load each entry file (daily or monthly)
+      const dailyGroup = {};
+      for (const slug of entries.slice(0, 90)) {
         try {
-          const mResp = await fetch(ARCHIVE_DIR + monthSlug + '.json');
-          if (!mResp.ok) continue;
-          const data = await mResp.json();
+          const resp2 = await fetch(ARCHIVE_DIR + slug + '.json');
+          if (!resp2.ok) continue;
+          const data = await resp2.json();
 
-          const [year, month] = monthSlug.split('-');
-          if (!yearGroups[year]) yearGroups[year] = [];
-          yearGroups[year].push({
-            slug: monthSlug,
-            label: new Date(parseInt(year), parseInt(month) - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+          // Determine display date from slug
+          let label;
+          if (slug.length === 10) {
+            // Daily: YYYY-MM-DD
+            const y = parseInt(slug.slice(0, 4));
+            const m = parseInt(slug.slice(5, 7)) - 1;
+            const d = parseInt(slug.slice(8, 10));
+            label = new Date(y, m, d).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          } else {
+            // Monthly: YYYY-MM
+            const y = parseInt(slug.slice(0, 4));
+            const m = parseInt(slug.slice(5, 7)) - 1;
+            label = new Date(y, m).toLocaleString('en-US', { month: 'long', year: 'numeric' }) + ' (Monthly)';
+          }
+
+          dailyGroup[slug] = {
+            slug: slug,
+            label: label,
             articles: data.news_cards || [],
             featured: data.featured_video || null,
             runner_ups: data.runner_ups || [],
-          });
+          };
         } catch (_) {
-          // Skip months that fail to load
+          // Skip entries that fail to load
         }
       }
 
-      render(yearGroups);
+      render(dailyGroup);
     } catch (err) {
       if (errorEl) {
         errorEl.classList.remove('hidden');
-        errorEl.textContent = 'Failed to load archive: ' + err.message;
+        document.getElementById('archive-error-msg').textContent = 'Failed to load archive: ' + err.message;
       }
     } finally {
       if (loadingEl) loadingEl.classList.add('hidden');
     }
   }
 
-  function render(yearGroups) {
-    const years = Object.keys(yearGroups).sort().reverse();
+  function render(dailyGroup) {
+    const slugs = Object.keys(dailyGroup).sort().reverse();
     let html = '';
 
-    for (const year of years) {
-      html += `<div class="archive-year"><h2>${year}</h2>`;
-      for (const month of yearGroups[year]) {
-        const total = month.articles.length + (month.featured ? 1 : 0) + month.runner_ups.length;
-        html += `
-          <div class="archive-month">
-            <h3 onclick="this.nextElementSibling.classList.toggle('hidden')">
-              ${esc(month.label)} — ${total} article${total !== 1 ? 's' : ''}
-            </h3>
-            <div class="archive-articles hidden">
-              ${month.featured ? renderFeaturedRow(month.featured) : ''}
-              ${month.runner_ups.map(ru => renderArticleRow(ru, 'Runner-up')).join('')}
-              ${month.articles.map(a => renderArticleRow(a, '')).join('')}
-            </div>
-          </div>
-        `;
+    for (const slug of slugs) {
+      const d = dailyGroup[slug];
+      const total = d.articles.length + (d.featured ? 1 : 0) + d.runner_ups.length;
+      html += '<div class="archive-month"><div class="archive-header" onclick="this.nextElementSibling.classList.toggle(&#39;hidden&#39;)"><h3>' + esc(d.label) + '</h3><span class="archive-count">' + total + ' article' + (total !== 1 ? 's' : '') + '</span></div>';
+      html += '<div class="archive-articles hidden">';
+      if (d.featured) html += renderFeaturedRow(d.featured);
+      if (d.featured && d.runner_ups.length) {
+        html += '<div class="archive-separator"></div>';
       }
-      html += '</div>';
+      for (const ru of d.runner_ups) {
+        html += renderArticleRow(ru, 'Runner-up');
+      }
+      if (d.runner_ups.length && d.articles.length) {
+        html += '<div class="archive-separator"></div>';
+      }
+      for (const a of d.articles) {
+        html += renderArticleRow(a, '');
+      }
+      html += '</div></div>';
     }
 
     container.innerHTML = html || '<p class="text-center" style="color:var(--text-muted);padding:40px 0;">No archives to display.</p>';
   }
 
   function renderFeaturedRow(fv) {
-    return `
-      <div class="article-row">
-        <div>
-          <span class="badge badge-featured" style="margin-right:6px;">Featured</span>
-          <a href="${esc(fv.url)}" target="_blank" rel="noopener">${esc(fv.title)}</a>
-        </div>
-        <span class="article-score">${fv.score ? fv.score.toFixed(2) : ''}</span>
-      </div>
-    `;
+    return '<div class="article-row"><div><span class="badge badge-featured" style="margin-right:6px;">Featured</span><a href="' + esc(fv.url) + '" target="_blank" rel="noopener">' + esc(fv.title) + '</a></div><span class="article-score">' + (fv.score ? fv.score.toFixed(2) : '') + '</span></div>';
   }
 
   function renderArticleRow(a, label) {
-    return `
-      <div class="article-row">
-        <div>
-          ${label ? `<span class="badge badge-featured" style="margin-right:6px;">${esc(label)}</span>` : ''}
-          <a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>
-        </div>
-        <span class="article-score">${a.score ? a.score.toFixed(2) : ''}</span>
-      </div>
-    `;
+    return '<div class="article-row"><div>' + (label ? '<span class="badge badge-featured" style="margin-right:6px;">' + esc(label) + '</span>' : '') + '<a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.title) + '</a></div><span class="article-score">' + (a.score ? a.score.toFixed(2) : '') + '</span></div>';
   }
 
   function esc(s) {
@@ -121,7 +118,7 @@
     return d.innerHTML;
   }
 
-  // ── Go ─────────────────────────────────────────────
+  // — Go ─
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', main);
   } else {
